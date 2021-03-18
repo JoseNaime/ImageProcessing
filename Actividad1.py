@@ -1,53 +1,58 @@
-from matplotlib import pyplot as plt
 import numpy as np
 import cv2 as cv
 
+# Asigna filtros kernel
+BORDERS = np.array([[0, 1, 0],
+                    [1, -4, 1],
+                    [0, 1, 0]])
+SOBEL_X = np.array([[-1, 0, 1],
+                    [-2, 0, 2],
+                    [-1, 0, 1]])
+SOBEL_Y = np.array([[-1, -2, -1],
+                    [0, 0, 0],
+                    [1, 2, 1]])
 
+
+# Carga la imagen en Grayscale
 def loadImage(url):
     return cv.imread(url, cv.IMREAD_GRAYSCALE)
 
 
-img = loadImage('./Image1.png')
-cv.imshow("Original", img)
-
-borders = np.array([[0, 1, 0],
-                    [1, -4, 1],
-                    [0, 1, 0]])
-
-sobelX = np.array([[-1, 0, 1],
-                   [-2, 0, 2],
-                   [-1, 0, 1]])
-
-sobelY = np.array([[-1, -2, -1],
-                   [0, 0, 0],
-                   [1, 2, 1]])
-
-
+# Multiplica la seccion por los valores Kernel
 def getKernel(section, kernel):
-    rows, cols = section.shape
-    result = 0.0
-    for i in range(rows):
-        for j in range(cols):
-            result += section[i, j] * kernel[i, j]
-    return result
+    n = section.size
+    return np.sum((section * kernel)) / n
 
 
-def convolution(img, kernel):
+def convolution(img, kernel, padding=1):
     iRows, iColumns = img.shape
     kRows, kColumns = kernel.shape
 
-    response = np.zeros(img.shape)  # matriz donde guardo el resultado
+    # [(W−K+2P)/S]+1
+    iColumnsFiltered = int((iColumns - kColumns + 2 * padding) + 1)
+    iRowsFiltered = int((iRows - kRows + 2 * padding) + 1)
+    response = np.zeros((iRowsFiltered, iColumnsFiltered))
 
-    for i in range(iRows):
-        for j in range(iColumns):
+    paddingImg = img
+    if padding != 0:
+        paddingImg = np.zeros(
+            (iRowsFiltered + 2 * padding, iColumnsFiltered + 2 * padding))
+        paddingImg[padding:-padding, padding:-padding] = img
+
+    for i in range(iRowsFiltered - kRows):
+        for j in range(iColumnsFiltered - kColumns):
             response[i, j] = getKernel(
-                img[i:i + kRows,
+                paddingImg[i:i + kRows,
                 j:j + kColumns], kernel)
     return response
 
 
-cv.imshow("Laplacian", convolution(img, borders))
-cv.imshow("Sobel X", convolution(img, sobelX))
-cv.imshow("Sobel Y", convolution(img, sobelY))
-cv.waitKey(0)
-cv.destroyAllWindows()
+if __name__ == '__main__':
+    img = loadImage('./images/Image1.png')
+
+    cv.imshow("Original", img)
+    cv.imshow("Laplacian", convolution(img, BORDERS))
+    cv.imshow("Sobel X", convolution(img, SOBEL_X))
+    cv.imshow("Sobel Y", convolution(img, SOBEL_Y))
+    cv.waitKey(0)
+    cv.destroyAllWindows()
